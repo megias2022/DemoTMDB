@@ -1,82 +1,75 @@
 package io.buildwithnd.demotmdb.ui.listing
 
 import android.os.Bundle
-import android.view.View
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import io.buildwithnd.demotmdb.R
+import io.buildwithnd.demotmdb.databinding.ActivityMainBinding
 import io.buildwithnd.demotmdb.model.Movie
-import io.buildwithnd.demotmdb.model.Result
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.activity_main.loading
-
 
 /**
  * Shows list of movie/show
  */
+
 @AndroidEntryPoint
 class ListingActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
     private val list = ArrayList<Movie>()
     private val viewModel by viewModels<ListingViewModel>()
     private lateinit var moviesAdapter: MoviesAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         init()
-        subscribeUi()
+        setUpObservers()
     }
 
     private fun init() {
-        title = "Trending Movies"
+        title = "Movies"
         val layoutManager = LinearLayoutManager(this)
         rvMovies.layoutManager = layoutManager
 
         val dividerItemDecoration = DividerItemDecoration(
-                rvMovies.context,
-                layoutManager.orientation
+            rvMovies.context,
+            layoutManager.orientation
         )
-
         rvMovies.addItemDecoration(dividerItemDecoration)
         moviesAdapter = MoviesAdapter(this, list)
         rvMovies.adapter = moviesAdapter
+
+        binding.searchHome.doOnTextChanged { query, _, _, _ ->
+            viewModel.searchMovies(query.toString())
+        }
     }
 
-    private fun subscribeUi() {
-        viewModel.movieList.observe(this, Observer { result ->
-
-            when (result.status) {
-                Result.Status.SUCCESS -> {
-                    result.data?.results?.let { list ->
-                        moviesAdapter.updateData(list)
-                    }
-                    loading.visibility = View.GONE
-                }
-
-                Result.Status.ERROR -> {
-                    result.message?.let {
-                        showError(it)
-                    }
-                    loading.visibility = View.GONE
-                }
-
-                Result.Status.LOADING -> {
-                    loading.visibility = View.VISIBLE
-                }
+    private fun setUpObservers() {
+        viewModel.loadingIsShowing.observe(
+            this,
+            Observer {
+                binding.loading.isVisible = it
             }
-
-        })
-    }
-
-    private fun showError(msg: String) {
-        Snackbar.make(vParent, msg, Snackbar.LENGTH_INDEFINITE).setAction("DISMISS") {
-        }.show()
+        )
+        viewModel.showError.observe(
+            this,
+            Observer {
+                Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+            }
+        )
+        viewModel.movieList.observe(
+            this,
+            Observer {
+                moviesAdapter.updateData(it)
+            }
+        )
     }
 }

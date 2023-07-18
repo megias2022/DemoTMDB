@@ -1,6 +1,7 @@
 package io.buildwithnd.demotmdb.data.remote
 
 import io.buildwithnd.demotmdb.model.MovieDesc
+import io.buildwithnd.demotmdb.model.MovieSearchDTO
 import io.buildwithnd.demotmdb.model.Result
 import io.buildwithnd.demotmdb.model.TrendingMovieResponse
 import io.buildwithnd.demotmdb.network.services.MovieService
@@ -17,19 +18,31 @@ class MovieRemoteDataSource @Inject constructor(private val retrofit: Retrofit) 
     suspend fun fetchTrendingMovies(): Result<TrendingMovieResponse> {
         val movieService = retrofit.create(MovieService::class.java);
         return getResponse(
-                request = { movieService.getPopularMovies() },
-                defaultErrorMessage = "Error fetching Movie list")
-
+            request = { movieService.getPopularMovies() },
+            defaultErrorMessage = "Error fetching Movie list"
+        )
     }
 
     suspend fun fetchMovie(id: Int): Result<MovieDesc> {
         val movieService = retrofit.create(MovieService::class.java);
         return getResponse(
-                request = { movieService.getMovie(id) },
-                defaultErrorMessage = "Error fetching Movie Description")
+            request = { movieService.getMovie(id) },
+            defaultErrorMessage = "Error fetching Movie Description"
+        )
     }
 
-    private suspend fun <T> getResponse(request: suspend () -> Response<T>, defaultErrorMessage: String): Result<T> {
+    suspend fun searchMoviesFromNetwork(query: String): Result<MovieSearchDTO> {
+        val movieService = retrofit.create(MovieService::class.java);
+        return getResponse(
+            request = { movieService.getMovieList(query) },
+            defaultErrorMessage = "Error fetching Movies"
+        )
+    }
+
+    private suspend fun <T> getResponse(
+        request: suspend () -> Response<T>,
+        defaultErrorMessage: String
+    ): Result<T> {
         return try {
             println("I'm working in thread ${Thread.currentThread().name}")
             val result = request.invoke()
